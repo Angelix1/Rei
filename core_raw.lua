@@ -167,6 +167,1467 @@ write("reinternal/core.lua", [[
 
 
 write("reinternal/files.lua", [[
+	local core = [[
+		core = {}
+		lfs = lfs or require("lfs")
+		ModManager.version = "1.5.0"
+
+		-- ============================================  actual code under
+		function core.init()
+		    EnableDebugLog = true -- false in release
+		    logToFile("=============== [CORE:start] ===============")
+		    modloc = {}
+
+		    -- =============
+		    ModManager.extendRoute("lib.ally.ally_command", "ally_command")
+		    ModManager.extendRoute("lib.ally.ally_list", "ally")
+		    ModManager.extendRoute("lib.base_npc.base_npc_list", "basenpc")
+		    ModManager.extendRoute("lib.base_npc.buyer_list", "base_buyer")
+		    ModManager.extendRoute("lib.base_npc.trader_list", "base_trader")
+		    ModManager.extendRoute("lib.base_npc.workshop_list", "base_workshop")
+		    ModManager.extendRoute("lib.base_npc.train_list", "base_train")
+		    ModManager.extendRoute("lib.base_npc.product_list", "base_product")
+		    ModManager.extendRoute("lib.base_npc.product_sell_list", "base_product_sell")
+		    ModManager.extendRoute("lib.base_npc.product_craft_list", "base_product_craft")
+		    ModManager.extendRoute("lib.base_npc.product_repair_list", "base_product_repair")
+		    ModManager.extendRoute("lib.battle.obj_list.battle_map_list", "battle_map")
+		    ModManager.extendRoute("lib.battle.obj_list.battle_map_decor_list", "battle_map_decor")
+		    ModManager.extendRoute("lib.battle.obj_list.terrain_list", "battle_terrain")
+		    ModManager.extendRoute("lib.battle.obj_list.terrain_decor_list", "battle_terrain_decor")
+		    ModManager.extendRoute("lib.battle.obj_list.faction_list", "battle_faction")
+		    ModManager.extendRoute("lib.battle.obj_list.weapon_human_list", "battle_weapon")
+
+		    ModManager.extendRoute("lib.battle.obj_list.unit_ally_list", "battle_unit_ally")
+		    ModManager.extendRoute("lib.battle.obj_list.unit_bandit_list", "battle_unit_enemy")
+		    
+		    ModManager.extendRoute("lib.battle.obj_list.enemy_animal_list", "battle_enemy_set")
+		    ModManager.extendRoute("lib.battle.obj_list.effect_list", "battle_effect")
+		    ModManager.extendRoute("lib.battle.obj_list.perk_list", "battle_perk")
+		    ModManager.extendRoute("lib.chest.item_chest_list", "item_chest")
+		    ModManager.extendRoute("lib.chest.chest_list", "chest")
+		    ModManager.extendRoute("lib.config.hard_config", "config_hard")
+		    ModManager.extendRoute("lib.cooking_list", "cooking")
+		    ModManager.extendRoute("lib.disease.disease_list", "disease")
+		    ModManager.extendRoute("lib.interface.image_list", "image")
+		    ModManager.extendRoute("lib.interface.image_sheet_list", "image_sheet")
+		    ModManager.extendRoute("lib.items.ammo", "item")
+		    ModManager.extendRoute("lib.level.recipe_list", "recipe")
+		    ModManager.extendRoute("lib.level.perk_list", "perk")
+		    ModManager.extendRoute("lib.level.level_list", "level")
+		    ModManager.extendRoute("lib.location.city_list", "location_city")
+		    ModManager.extendRoute("lib.location.location_list", "location")
+		    -- ModManager.extendRoute("lib.location.location_season_list", "location")
+		    ModManager.extendRoute("lib.location.base_npc", "location_base_npc")
+		    ModManager.extendRoute("lib.location.base_enemy", "location_base_enemy")
+		    ModManager.extendRoute("lib.loot.item_loot_list", "loot_item")
+		    ModManager.extendRoute("lib.loot.miniloc_loot_list", "loot_miniloc")
+		    ModManager.extendRoute("lib.loot.location_loot_list", "loot_location")
+		    ModManager.extendRoute("lib.miniloc.miniloc_list", "miniloc")
+		    ModManager.extendRoute("lib.npc.npc_list", "npc")
+		    ModManager.extendRoute("lib.quest.bar_quest_list", "quest_bar")
+		    ModManager.extendRoute("lib.quest.quest_list", "quest")
+		    ModManager.extendRoute("lib.random_event_list", "random_event")
+		    ModManager.extendRoute("lib.weather.weather_list", "weather")
+		    
+		    
+		    ModManager.catroute() -- create category routing
+		    
+		    ModManager.extendFuncRoute("lib.interface.image_master", "image_method")
+		    ModManager.extendFuncRoute("lib.battle.unit_logic", "battle_unit_logic")    
+		        
+		    -- =====================================    
+		    local loader = require("angel_mod.loader")
+		    
+		    local allMods = loader.loadMods()
+		    
+		    local general = {
+		        fontSize = {
+		            title = 46,
+		            body = 40,
+		            footer = 34
+		        },
+		        button = {
+		            close = {
+		                size = 80,
+		                height = 60
+		            }
+		        },
+		        edgeRound = 8,
+		    }
+		    
+		    -- Core util here 
+		    
+		    if #allMods.preload > 0 then        
+		        loader.executeMods(allMods.preload, true)
+		    else    
+		        logToFile("ℹ️ No preload mods to load")
+		    end
+		    
+		    if #allMods.normal > 0 then
+		        -- Checker configuration
+		        local checkInterval = 1000 -- milliseconds 
+		        local maxAttempts = 40
+		        local attempts = 0
+		        local checkerTimer = nil
+		        local labels = "main.gameNetwork"
+		        
+		        -- Self-destructing checker function
+		        local function checkNotifications()
+		    	    if checkerTimer then
+				        timer.cancel(checkerTimer)
+				        checkerTimer = nil
+				    end
+
+		            attempts = attempts + 1
+		            
+		            -- Success condition
+		            if type(main) == "table" and type(main.gameNetwork) == "table" then
+		                logToFile("✅ " .. labels .. " ready - Executing normal mods")
+		                loader.executeMods(allMods.normal, false)
+		                
+		                itemlist = main.itemlist.table
+		                bweapon = main.battle.weapon.table
+		                
+		                -- Clean up
+		                if checkerTimer then timer.cancel(checkerTimer) end
+		                checkNotifications = nil  -- Remove function reference
+		                return
+		            end
+		            
+		            -- Fail condition
+		            if attempts >= maxAttempts then
+		                logToFile("❌ Failed to find " .. labels .. " after "..maxAttempts.." attempts")
+		                
+		                -- Clean up
+		                if checkerTimer then timer.cancel(checkerTimer) end
+		                checkNotifications = nil
+		                return
+		            end
+		            
+		            -- Continue checking
+		            logToFile("🔍 Waiting for " .. labels .. " (Attempt "..attempts.."/"..maxAttempts..")")
+		            checkerTimer = timer.performWithDelay(checkInterval, checkNotifications)
+		        end
+		        
+		        -- Start the checker
+		        logToFile("⏳ Delaying "..#allMods.normal.." normal mods until " .. labels .. " exist...")
+		        checkNotifications()  -- Initial call
+		    else    
+		        logToFile("ℹ️ No normal mods to load")
+		    end
+		    
+		    logToFile("[CORE] finished")
+		end 
+
+
+
+		return core
+	]\]
+
+	local loaderLuaCode = [[
+		-- main table
+		local modLoader = {}
+
+		-- Constants
+		local MODS_DIR = "angel_mod/modlist"
+		local MANIFEST_FILE = "manifest.lua"
+		local LOG_FILE = "angel_mod/modlist/loader.log"
+		local IGNORE_PREFIXES = {".", "_"}
+		local IGNORE_FOLDERS = {"assets"}
+		local loaderVersion = "1.4.0"
+
+		-- Initialize logging
+		local function loaderLog(message, wipe)
+		    -- if not EnableDebugLog then return end
+		    
+		    local logPath = system.pathForFile(LOG_FILE, system.DocumentsDirectory)
+		    
+		    -- Wipe log if requested
+		    if wipe then
+		        local wipeFile = io.open(logPath, "w")
+		        if wipeFile then
+		            wipeFile:close()
+		            return true  -- Return success status
+		        end
+		        return false
+		    end
+		    
+		    -- Normal logging
+		    local logFile = io.open(logPath, "a")
+		    if not logFile then return false end
+		    
+		    local timestamp = os.date("[%Y-%m-%d %H:%M:%S]")
+		    local success, err = pcall(function()
+		        logFile:write(timestamp .. " " .. message .. "\n")
+		    end)
+		    
+		    logFile:close()
+		    return success, err
+		end
+
+		-- Helper function to check if a path should be ignored
+		local function shouldIgnore(path)
+		    local name = path:match("([^/\\]+)$") or path
+		    
+		    for _, prefix in ipairs(IGNORE_PREFIXES) do
+		        if name:sub(1, #prefix) == prefix then
+		            return true
+		        end
+		    end
+		    
+		    for _, folder in ipairs(IGNORE_FOLDERS) do
+		        if name:lower() == folder:lower() then
+		            return true
+		        end
+		    end
+		    
+		    return false
+		end
+
+		-- Load and validate a single mod
+		local function loadMod(modPath)
+		    local manifestPath = modPath .. "." .. MANIFEST_FILE:gsub(".lua$", "")
+		    local success, manifest = pcall(require, manifestPath)
+		    
+		    if not success then
+		        local a = "❌ Failed to load manifest from " .. modPath .. ": " .. tostring(manifest)
+		        loaderLog(a)
+		        error(a)
+		        return nil
+		    end
+		    
+		    if type(manifest) ~= "table" then
+		        local _ = "❌ Manifest must return a table in " .. modPath
+		        loaderLog(_)
+		        error(_)
+		        return nil
+		    end
+
+		    -- Validate required fields
+		    local requiredFields = {
+		        "modName", "modVersion", "modAuthor", 
+		        "preLoad", "afterLoad", "coreVersion"
+		    }
+		    for _, field in ipairs(requiredFields) do
+		        if manifest[field] == nil then
+		            local _ = "❌ Missing required field '" .. field .. "' in " .. modPath
+		            loaderLog(_)
+		            error(_)
+		            return nil
+		        end
+		    end
+		    
+		    -- Validate core version compatibility [ ADDED IN 1.1.0 ]
+		    if not manifest.coreVersion then
+		        local _ = "❌ Missing required field 'coreVersion' in " .. modPath
+		        loaderLog(_)
+		        error(_)
+		        return nil
+		    else
+		        local versionCheck = ModManager.isVersionSufficient(manifest.coreVersion, ModManager.version)
+		        if not versionCheck then
+		            local _ = "❌ Mod requires ModManager version " .. manifest.coreVersion .. " or higher (current: " .. ModManager.version .. ", Please update to latest version or disable the mod) in " .. modPath
+		            loaderLog(_)
+		            error(_)
+		            return nil
+		        end
+		    end
+		    
+		    -- validation for load categories
+		    if not (manifest.preLoad or manifest.afterLoad) then
+		        local err = "❌ Manifest must contain preLoad/afterLoad tables in "..modPath
+		        loaderLog(err)
+		        error(err)
+		        return nil
+		    end
+		    
+		    -- Verify files exist
+		    local function verifyFiles(files)
+		        for _, file in ipairs(files or {}) do
+		            local filePath = modPath .. "." .. file:gsub("%.lua$", "")
+		            local ok, err = pcall(require, filePath)
+		            if not ok then
+		                error("❌ Failed to load '" .. file .. "': " .. err)
+		            end
+		        end
+		    end
+		    
+		    verifyFiles(manifest.preLoad)
+		    verifyFiles(manifest.afterLoad)
+		    
+		    return manifest
+		end
+
+		-- Execute mod files
+		local function executeMod(modPath, manifest)
+		    for _, file in ipairs(manifest.modFiles) do
+		        local filePath = modPath .. "." .. file:gsub(".lua$", "")
+		        local success, modChunk = pcall(require, filePath)
+		        
+		        if success then            
+		            if type(modChunk) == "function" then
+		                local actionSuccess, actionResult = pcall(modChunk)
+		                if not actionSuccess then
+		                    loaderLog("❌ Error running action in " .. file .. ": " .. tostring(actionResult))
+		                else
+		                    loaderLog("✔ Executed " .. file)
+		                end
+		            else
+		                loaderLog("ℹ️ " .. file .. " loaded but didn't return an action function")
+		            end
+		        else
+		            loaderLog("❌ Failed to load " .. file .. ": " .. tostring(modChunk))
+		        end
+		            
+		        -- ::continue::
+		    end
+		end
+
+		-- Main loader function
+
+		function modLoader.loadMods()
+		    loaderLog(nil, true)  -- Clears the log file completely
+		    loaderLog("=============================== [LOADER] Scanning for mods")
+		    local basePath = system.pathForFile(MODS_DIR, system.DocumentsDirectory)
+		    local mods = {
+		        preload = {},
+		        normal = {}
+		    }
+		    
+		    -- Scan mod directory
+		    for modFolder in lfs.dir(basePath) do
+		        if modFolder ~= "." and modFolder ~= ".." then
+		            local fullPath = basePath .. "/" .. modFolder
+		            local attr = lfs.attributes(fullPath)
+		            
+		            if attr and attr.mode == "directory" and not shouldIgnore(modFolder) then
+		                local modPath = MODS_DIR .. "/" .. modFolder
+		                modPath = ModManager.replaceSlashes(modPath, ".")
+		                local manifest = loadMod(modPath)
+		                
+		                if manifest then
+		                    local modInfo = {
+		                        path = modPath,
+		                        manifest = manifest,
+		                        name = manifest.modName,
+		                        version = manifest.modVersion
+		                    }
+		                    
+		                    -- Categorize by load phase
+		                    if manifest.preLoad and #manifest.preLoad > 0 then
+		                        table.insert(mods.preload, modInfo)
+		                        loaderLog("✔ Found PRELOAD mod: "..manifest.modName)
+		                    end
+		                    
+		                    if manifest.afterLoad and #manifest.afterLoad > 0 then
+		                        table.insert(mods.normal, modInfo)  -- 'normal' now means afterLoad
+		                        loaderLog("✔ Found AFTERLOAD mod: "..manifest.modName)
+		                    end
+		                end
+		            end
+		        end
+		    end
+		    
+		    loaderLog(string.format("Scan complete: %d preload mods, %d normal mods found",
+		        #mods.preload, #mods.normal))
+		    
+		    return mods
+		end
+
+		function modLoader.executeMods(modList, isPreloadPhase)
+		    local count = 0
+		    ModManager.loadedMods = ModManager.loadedMods or {}
+		    
+		    for _, mod in ipairs(modList or {}) do
+		        local files = isPreloadPhase and mod.manifest.preLoad or mod.manifest.afterLoad
+		        
+		        for _, file in ipairs(files or {}) do
+		            local filePath = mod.path.."."..file:gsub(".lua$", "")
+		            loaderLog("⚡ Loading: "..file)
+		            
+		            local success, result = pcall(require, filePath)
+		            if success then
+		                if type(result) == "function" then
+		                    local success, err = pcall(result)  -- Execute safely and capture errors
+		                    if success then
+		                        loaderLog("✅ Success: " .. file)
+		                    else
+		                        loaderLog("❌ Execution Failed: " .. file .. " | Error: " .. tostring(err))
+		                    end
+		                elseif result ~= nil then
+		                    loaderLog("⚠️ Warning: " .. file .. " | Exported a " .. type(result) .. " (expected function).")
+		                else
+		                    loaderLog("❌ Failed: " .. file .. " | File does not export anything.")
+		                end
+		                count = count + 1
+		                
+		                -- Track mod without duplicates
+		                if not tableContains(ModManager.loadedMods, mod.manifest) then
+		                    table.insert(ModManager.loadedMods, mod.manifest)
+		                end
+		            else
+		                loaderLog("❌ Failed: "..tostring(result))
+		            end
+		        end
+		    end
+		    
+		    loaderLog(string.format("✅ Executed %d %s files", count, 
+		        isPreloadPhase and "preLoad" or "afterLoad"))
+		    return count > 0
+		end
+
+		return modLoader
+	]\]
+
+	local featureFileCode = [[
+		local version = "1.5.0"
+
+		return {
+		    {
+		        id = "CONSOLE",
+		        name = "Console",
+		        func = function()
+		            return nil
+		        end
+		    },
+		    {
+		        id = nil,
+		        name = "Show loaded mods",
+		        func = function(x)
+		            --CM()
+		            modlist_ui.Show(x)
+		        end
+		    },
+		    {
+		        id = nil,
+		        name = "Add Helicarrier",
+		        func = function()
+		        	local data = {}
+		        	data.id = "berserk"
+		        	data.quantity = 1
+		        	data.depreciation = 0
+		        	
+		        	if main.itemlist.get(main.itemlist, data.id) then
+		            	main.inventory.add(data)
+		            
+		            	main.animation.addItem(main.animation, { "berserk", 1, 0 })
+		            else
+		            	main.interface.open(main.interface, {
+		            		id = "message", title = "no", text = "no item" 
+		            	})
+		            end
+		            return "added"
+		        end
+		    },
+		    {
+		        id = nil,
+		        name = "Add debug tools",
+		        func = function()
+		            function create(name, qua, dep)
+		                return { 
+		                    id = name, 
+		                    quantity = qua or 1, 
+		                    depreciation = dep or 0 
+		                }
+		            end
+		        	local data = {
+		        	    create("agw_dto"),
+		        	    create("agw_dto2")
+		        	}
+		        	
+		        	local fx = ""
+		        	
+		        	for index = 1, #data, 1 do
+		        	    if main.itemlist.get(main.itemlist, data[index].id) then
+		                 	main.inventory.add(data[index])
+		                 	
+		                 	local f = { data[index].id, data[index].quantity, 0 }
+		            
+		                 	main.animation.addItem(main.animation, f)
+		                else
+		            	    fx = fx .. data[index].id .. "\n"
+		                end
+		            end
+		            
+		            if #fx > 0 then
+		                main.interface.open(main.interface, {
+		           	        id = "message", title = "Item Doesn't exist", text = fx
+		                })
+		            end
+		            return "added"
+		        end
+		    },
+		    {
+		        id = nil,
+		        name = "Add exp to char",
+		        func = function()
+		            closeModMenu()
+		            main.interface:open({ 
+		                id = "input_dialog", 
+		                text = "Input exp amount to be given", 
+		                title = "Exp", 
+		                textConfirm = "Confirm", 
+		                actionConfirm = function(self) 
+		                    local text = self.text
+		                    -- logToFile(text)
+		                    if text and assert(type(tonumber(text))) == "number" then
+		                        main.level.addExp(main.level, { expValue = tonumber(text) })
+		                    elseif assert(type(tonumber(text))) ~= "number" then
+		                        main.interface:open({
+		                            id = "message",
+		                            title = "Error",
+		                            text = "Input not a number"
+		                        })
+		                    else
+		                        main.interface:open({
+		                            id = "message",
+		                            title = "Error",
+		                            text = "no input"
+		                        })
+		                    end
+		                end 
+		            })
+		        end
+		    },
+		    {
+		        id = nil,
+		        name = "Give Caps",
+		        func = function()
+		            closeModMenu()
+		            main.interface:open({ 
+		                id = "input_dialog", 
+		                text = "Input caps amount to be given", 
+		                title = "Caps", 
+		                textConfirm = "Confirm", 
+		                actionConfirm = function(self) 
+		                    local text = self.text
+		                    -- logToFile(text)
+		                    if text and assert(type(tonumber(text))) == "number" then
+		                        main.profile.addCaps(main.profile, tonumber(text))
+		                        main.animation.addItem(main.animation, { "caps", tonumber(text), 0 })
+		                    elseif assert(type(tonumber(text))) ~= "number" then
+		                        main.interface:open({
+		                            id = "message",
+		                            title = "Error",
+		                            text = "Input not a number"
+		                        })
+		                    else
+		                        main.interface:open({
+		                            id = "message",
+		                            title = "Error",
+		                            text = "no input"
+		                        })
+		                    end
+		                end 
+		            })
+		        end
+		    },
+		    {
+		        id = nil,
+		        name = "Currency Tool",
+		        func = function()
+		            closeModMenu()
+		            main.interface:open({ 
+		                id = "input_dialog", 
+		                text = "Input type and amount to be given (add-iron_nut-10 | rem-iron_nut-10)", 
+		                title = "type-CURRENCY-AMOUNT", 
+		                textConfirm = "Confirm", 
+		                actionConfirm = function(self) 
+		                    local text = self.text
+		                    --logToFile(text)
+		                    if text then
+		                        local sp = splitter(tostring(text), "-")
+		                        if sp[1] and sp[2] and sp[3] then
+		                            -- ModManager.showToast(dump(sp))
+		                            if sp[1] == "add" then
+		                                main.level:addCurrency(sp[2], tonumber(sp[3]))
+		                            elseif sp[1] == "rem" then
+		                                main.level:spendCurrency(sp[2], tonumber(sp[3]))
+		                            else
+		                                main.interface:open({
+			                                id = "message",
+			                                title = "Error",
+			                                text = "malformed input; Type: unknown, expected 'rem' or 'add'"
+			                            })
+		                            end
+		                        else
+		                            main.interface:open({
+		                                id = "message",
+		                                title = "Error",
+		                                text = "malformed input"
+		                            })
+		                        end
+		                    else
+		                        main.interface:open({
+		                            id = "message",
+		                            title = "Error",
+		                            text = "no input"
+		                        })
+		                    end
+		                end
+		            })
+		        end
+		    },
+		    {
+		        id = nil,
+		        name = "Item Tool",
+		        func = function()
+		            closeModMenu()
+		            main.interface:open({ 
+		                id = "input_dialog", 
+		                text = "Input type and amount to be given (add-iron-10 | rem-scrap_metal)", 
+		                title = "type-ITEMID-AMOUNT", 
+		                textConfirm = "Confirm", 
+		                actionConfirm = function(self) 
+		                    local text = self.text
+		                    --logToFile(text)
+		                    if text then
+		                        local sp = splitter(tostring(text), "-")
+		                        if sp[1] and sp[2] then
+		                            -- logToFile(dumpTableWithDepth(sp))
+		                            if sp[1] == "add" and sp[3] then
+			                            local datas = {
+			                                id=sp[2],
+			                                quantity= tonumber(sp[3]) or 1,
+			                                depreciation = 0
+			                            }
+			                            main.inventory.add(datas)
+			                         	main.animation.addItem(main.animation, { sp[2], (tonumber(sp[3]) or 1), 0 })
+		                            elseif sp[1] == "rem" then
+		                                rmItem(text)
+		                            else
+		                                main.interface:open({
+			                                id = "message",
+			                                title = "Error",
+			                                text = "malformed input; Type: unknown, expected 'rem' or 'add' | Missing amount for addItem"
+			                            })
+		                            end
+		                        else
+		                            main.interface:open({
+		                                id = "message",
+		                                title = "Error",
+		                                text = "malformed input"
+		                            })
+		                        end
+		                    else
+		                        main.interface:open({
+		                            id = "message",
+		                            title = "Error",
+		                            text = "no input"
+		                        })
+		                    end
+		                end
+		            })
+		        end
+		    },
+		    {
+		        id = nil,
+		        name = "Kill game",
+		        func = function() os.exit() end
+		    }
+		}
+	]\]
+
+	local menuFileCode = [[
+		Data = {}
+		
+		local version = "1.5.0"
+
+		local feature = require("angel_mod.feature")
+
+		function splitter(str, split)
+		    local results = {}
+		    for part in str:gmatch(string.format("([^%s]+)", split)) do
+		        table.insert(results, part)
+		    end
+		    return results
+		end
+
+		function CM()
+		    closeModMenu()
+		    if main.interface.group.mui.consoleGroup ~= nil then
+		        main.interface.group.mui.consoleGroup:removeSelf()
+		    end
+		end
+
+		function addItem(text)
+		    CM()
+		    if text == "all" then
+		        main.itemlist.addAllToInventory(nil, 1)
+		        return
+		    end 
+		    local sp = splitter(tostring(text), ".")
+		    if sp[1] and sp[2] then
+		        -- logToFile(dumpTableWithDepth(sp))
+		        local datas = {
+		            id=sp[1],
+		            quantity= tonumber(sp[2]) or 1,
+		            depreciation = 0
+		        }
+		        
+		        main.inventory.add(datas)
+		        
+		     	main.animation.addItem(main.animation, { sp[1], (tonumber(sp[2]) or 1), 0 })
+		     	
+		    else
+		        main.interface:open({
+		            id = "message",
+		            title = "Error",
+		            text = "malformed input"
+		        })
+		    end
+		end
+
+		function rmItem(name)
+		    CM()
+		    tab = main.character.table.inventory
+		    if name == "all" then
+		        main.character.table.inventory = {}
+		    else
+		        table.remove(tab, table.js.findIndex(tab, function(v) return v[1] == name end))
+		    
+		        -- main.character.table.inventory = tab
+		    end
+		end
+
+		local general = {
+		    fontSize = {
+		        title = 46,
+		        body = 40,
+		        footer = 34
+		    },
+		    button = {
+		        close = {
+		            size = 80,
+		            height = 60
+		        }
+		    },
+		    edgeRound = 8,
+		}
+
+		-- Function to show mod menu
+		function Data.show(modMenu) -- mig.modMenuGroup
+		    -- Check if mod menu is already shown, then close it
+		    if modMenu.group then
+		        Data.close(modMenu)
+		        return
+		    end
+		    
+		    main.interface:open({ 
+		        id = "message", 
+		        title = "Menu Info", 
+		        text = "This exist to prevent other interface accidentally clicked, click ok or back button to close this"
+		    })
+
+		    -- Set modMenu isOpen flag to true
+		    modMenu.isOpen = true
+
+		    -- Create a group to hold all menu elements
+		    modMenu.group = display.newGroup()
+
+		    -- Get screen dimensions
+		    local screenWidth = display.actualContentWidth
+		    local screenHeight = display.actualContentHeight
+
+		    -- Calculate menu box dimensions
+		    local menuBoxWidth = screenWidth * 0.8
+		    local menuBoxHeight = screenHeight * 0.8
+
+		    -- Set sizes for header, footer, and buttons
+		    local headerBoxHeight = 80
+		    local footerBoxHeight = 80
+
+		    -- Render mod menu UI
+		    print("Mod menu shown!")
+
+		    -- Create mod menu box
+		    local menuBox = display.newRoundedRect(
+		        modMenu.group, 
+		        display.contentCenterX, 
+		        display.contentCenterY, 
+		        menuBoxWidth, 
+		        menuBoxHeight,
+		        general.edgeRound
+		    )
+		    menuBox:setFillColor(0.2, 0.2, 0.2)
+
+		    -- Create header box
+		    local headerBox = display.newRoundedRect(
+		        modMenu.group, 
+		        display.contentCenterX, 
+		        menuBox.y - menuBoxHeight / 2 + headerBoxHeight / 2, 
+		        menuBoxWidth, 
+		        headerBoxHeight,
+		        general.edgeRound
+		    )
+		    headerBox:setFillColor(0.3, 0.3, 0.3, 0.5)
+
+		    -- Create Menu Title
+		    local Title = display.newText(
+		        modMenu.group, 
+		        "Menu", 
+		        menuBox.x, 
+		        headerBox.y, 
+		        native.systemFontBold, 
+		        general.fontSize.title
+		    )
+
+		    -- Create close button
+		    local closeButton = display.newText(
+		        modMenu.group, 
+		        "X", 
+		        menuBox.x + menuBox.width / 2 - general.button.close.size * 1.5, 
+		        headerBox.y, 
+		        native.systemFontBold, 
+		        general.button.close.size
+		    )
+		    closeButton:setFillColor(1, 0, 0)
+
+		    -- Function to handle touch event on close button
+		    local function closeButtonTouch(event)
+		        if event.phase == "ended" then
+		            Data.close(modMenu)
+		            return true
+		        end
+		    end
+		    closeButton:addEventListener("touch", closeButtonTouch)
+
+		    -- Create body box for mod list
+		    local bodyBoxHeight = menuBoxHeight - headerBoxHeight - footerBoxHeight
+		    local bodyBox = display.newRect(modMenu.group, display.contentCenterX, menuBox.y, menuBoxWidth, bodyBoxHeight)
+		    bodyBox:setFillColor(0.3, 0.3, 0.3)
+
+		    -- print(bodyBox.x, menuBox.x )
+		    -- Create scroll view for mod list
+		    modMenu.group.scrollView = widget.newScrollView({
+		        parent = modMenu.group,
+		        x = bodyBox.x + 7,
+		        y = bodyBox.y,
+		        width = bodyBox.width - 50,
+		        height = bodyBox.height,
+		        horizontalScrollDisabled = true,
+		        backgroundColor = {0.3, 0.3, 0.3},
+		        listener = function() return true end -- Prevents touch propagation to underlying objects
+		    })
+
+		    -- Create mod menu buttons
+		    local modButtonWidth = modMenu.group.scrollView.width - 20
+		    local modButtonX = modMenu.group.scrollView.x + modMenu.group.scrollView.width / 2 -- Centering the buttons horizontally within the scroll view
+		    local modButtonY = modMenu.group.scrollView.y - modMenu.group.scrollView.height / 2 + general.button.close.height / 2 -- Adjusted to remove padding
+
+		    for i, mod in pairs(feature) do
+
+		        if i == 1 then
+		            modButtonY = general.button.close.height
+		            modButtonX = modMenu.group.scrollView.x
+		        end
+
+		        local modButton = display.newRoundedRect(
+		            modMenu.group, 
+		            modButtonX, 
+		            modButtonY, 
+		            modButtonWidth - 200, 
+		            general.button.close.height, 
+		            general.edgeRound
+		        )
+		        modButton.x = bodyBox.width + 25
+		        modButton:setFillColor(0.6, 0.6, 0.6)
+
+		        -- Add mod index to button object for later reference
+		        modButton.modIndex = i
+
+		        -- Add touch event listener to mod menu button
+		        if mod and mod.name and mod.func then
+		            if mod.id == "CONSOLE" then
+		                modButton:addEventListener("touch", function(event)
+		                    if event.phase == "ended" then
+		                        Data.openConsole(modMenu)
+		                    end
+		                    return true
+		                end)
+		            else
+		                modButton:addEventListener("touch", function (ev) 
+		                    modButtonTouch(ev, modMenu)
+		                    return true
+		                end)
+		            end
+		        end
+
+		        if mod and mod.name and (mod.func and mod.name ~= "CONSOLE") then
+		            -- Add label to mod menu button
+		            local modLabel = display.newText(
+		                modMenu.group, 
+		                mod.name, 
+		                modButtonX, 
+		                modButtonY, 
+		                native.systemFont, 
+		                general.fontSize.body
+		            )
+		            modLabel:setFillColor(1, 1, 1)
+
+		            -- Center mod button and label
+		            modButton.x = modMenu.group.scrollView.x
+		            modButton.anchorX = 0.5
+		            modLabel.x = modMenu.group.scrollView.x
+		            modLabel.anchorX = 0.5
+
+		            -- Insert mod button into scroll view
+		            modMenu.group.scrollView:insert(modButton)
+		            modMenu.group.scrollView:insert(modLabel)
+
+		            -- Update position for next button
+		            modButtonY = modButtonY + general.button.close.height + 10 -- Adjusted to remove padding
+		        end
+		    end
+
+		    -- Set menuBox flag to true
+		    modMenu.group.isOpen = true
+		end
+
+		-- Function to close mod menu
+		function Data.close(modMenu)
+		    -- Check if mod menu is already closed
+		    if modMenu and not modMenu.group then
+		        return
+		    end
+
+		    -- Set modMenu isOpen flag to false
+		    modMenu.isOpen = false
+
+		    -- Show mod menu icon
+		    if modMenu.micon then
+		        modMenu.micon.isVisible = true
+		    end
+
+		    -- Remove any display objects related to the mod menu (e.g., menuBox, headerBox, bodyBox, footerBox)
+		    display.remove(modMenu.group)
+		    display.remove(modMenu.group.scrollView)
+		    modMenu.group = nil
+
+		    -- Reset any other mod menu-related variables or states as needed
+		end
+
+
+		-- Create mod menu buttons
+		function modButtonTouch(event, modM)
+		    -- Handle touch events for mod menu buttons
+		    if event.phase == "ended" then
+		   
+		        -- Animate the color change
+		        if event.target ~= nil and assert(type(event.target.setFillColor)) == "function" then
+		            transition.to(event.target, {time = 200, transition = easing.outQuad, onComplete = function()
+		                if event.target.setFillColor ~= nil then
+		                    event.target:setFillColor(0.6, 0.6, 0.6) -- Return to grey
+		                end 
+		            end})
+		    
+		            -- Animate the color change
+		            transition.to(event.target, {time = 200, delay = 200, transition = easing.inQuad, onComplete = function()
+		                if event.target.setFillColor ~= nil then
+		                    event.target:setFillColor(0.5, 1, 0.5) -- Return to grey
+		                end 
+		            end})
+		        end
+		        
+		        local modIndex = event.target.modIndex
+
+		        if feature[modIndex].func ~= nil then
+		            feature[modIndex].func(modM)
+		        else
+		            native.alert("Error", feature[modIndex].name .." has no function", {"otay"})
+		        end
+		        -- You can add logic here to apply the selected mod
+		    end
+		    return true
+		end
+
+		-- Define a global display group for the console UI
+		function Data.openConsole(modMenu)
+
+		    -- Render console UI
+		    print("Opening console UI")
+		    -- Clear the console group
+		    if modMenu.consoleGroup then
+		        modMenu.consoleGroup:removeSelf()
+		    end
+
+		    local generalFontSize = 24
+
+		    modMenu.consoleGroup = display.newGroup()
+
+		    -- Create resizable box for console
+		    local consoleWidth = display.contentWidth * 0.75
+		    local consoleHeight = display.contentHeight * 0.75
+
+		    -- Create console background
+		    local consoleBackground = display.newRect(
+		        modMenu.consoleGroup, 
+		        display.contentCenterX, 
+		        display.contentCenterY, 
+		        consoleWidth, 
+		        consoleHeight
+		    )
+		    consoleBackground:setFillColor(0.2, 0.2, 0.2, 0.8)
+		    consoleBackground.strokeWidth = 1
+		    consoleBackground:setStrokeColor(1, 1, 1)
+
+		    -- Create header
+		    local header = display.newRect(
+		        modMenu.consoleGroup, 
+		        display.contentCenterX, 
+		        consoleBackground.y - consoleHeight / 2 + 20, 
+		        consoleWidth, 
+		        40
+		    )
+		    header:setFillColor(0.4, 0.4, 0.4)
+
+		    local headerText = display.newText(
+		        modMenu.consoleGroup, 
+		        "Console", 
+		        header.x, 
+		        header.y, native.systemFontBold, 
+		        general.fontSize.title
+		    )
+
+		    -- Create close button
+		    local closeButton = display.newText(
+		        modMenu.consoleGroup, 
+		        "X", 
+		        consoleBackground.x + consoleWidth / 2 - 20, 
+		        header.y, 
+		        native.systemFontBold, 
+		        general.button.close.size
+		    )
+		    closeButton:setFillColor(1, 0, 0)
+		    closeButton:addEventListener("tap", function()
+		        Data.closeConsole(modMenu)
+		    end)
+
+		    -- Create text input
+		    local inputField = native.newTextBox(
+		        display.contentCenterX, 
+		        consoleBackground.y, 
+		        consoleWidth * 0.75, 
+		        consoleHeight * 0.75
+		    )
+		    inputField.size = 18
+		    inputField.text = "main"
+		    inputField.isEditable = true
+		    
+		    modMenu.consoleGroup:insert(inputField)
+
+		    -- Create eval button
+		    local evalButton = display.newText(
+		        modMenu.consoleGroup, 
+		        "Eval", 
+		        display.contentCenterX, 
+		        consoleBackground.y + consoleHeight / 2 - 50, 
+		        native.systemFontBold, 
+		        general.fontSize.title
+		    )
+		    evalButton:setFillColor(1, 1, 1)
+		    
+		    local function sendEvalButtonTouch(event)
+		        local userInput = inputField.text
+		    
+		        -- Try evaluating as an expression first
+		        local chunk, err = loadstring("return " .. tostring(userInput))
+		    
+		        if not chunk then
+		            -- If it fails, try it as a statement
+		            chunk, err = loadstring(tostring(userInput))
+		    
+		            if not chunk then
+		                inputField.text = "Error during compilation: \n\n" .. tostring(dump(err, 5))
+		                return
+		            end
+		        end
+		    
+		        local success, result = pcall(chunk)
+		    
+		        if success then
+		            -- Ensure `false` and `nil` are displayed correctly
+		            if result == nil then
+		                inputField.text = "nil"
+		            elseif result == false then
+		                inputField.text = "false"
+		            else
+		                inputField.text = tostring(dump(result, 5))
+		            end
+		        else
+		            inputField.text = "Error during execution:\n\n" .. tostring(dump(result, 5))
+		        end
+		    end
+		    evalButton:addEventListener("tap", sendEvalButtonTouch)
+
+		    -- Add the console group to the stage
+		    -- display.getCurrentStage():insert(modMenu.consoleGroup)
+		end
+
+		function closeModMenu()
+		    Data.close(main.interface.group.mui)
+		end
+
+		function Data.closeConsole(modMenu)
+		    -- Remove the console group from the stage
+		    if modMenu.consoleGroup then
+		        modMenu.consoleGroup:removeSelf()
+		        print("Console closed!")
+		    end
+		end
+
+
+		--=== thingy
+		modlist_ui = {}
+		scrollView = nil
+		scrollGroup = nil
+		MODLOADED = { 
+		    { name = "Test", author = "test", version = "1.0.0" },
+		    -- { name = "Test Mod", author = "bob", version = "1.0.0", description = "test description" }
+		}
+
+		-- Helper: truncate text with ellipsis
+	    local function truncateText(text, font, fontSize, maxWidth)
+	        local temp = display.newText({
+	            text = text,
+	            font = font,
+	            fontSize = fontSize
+	        })
+	        temp.isVisible = false
+	    
+	        while temp.width > maxWidth and #text > 0 do
+	            text = text:sub(1, -2)
+	            temp.text = text .. "..."
+	        end
+	    
+	        local result = temp.text
+	        temp:removeSelf()
+	        return result
+	    end
+
+		-- Show the loaded mod list
+		function modlist_ui.Show(parentGroup)
+		    if scrollGroup then return end -- Already shown
+
+		    parentGroup.scrollGroup = display.newGroup()
+		    
+		    scrollGroup = parentGroup.scrollGroup
+
+		    scrollView = widget.newScrollView({
+		        width = display.contentWidth * 0.9,
+		        height = display.contentHeight * 0.8,
+		        scrollWidth = 0,
+		        scrollHeight = 0,
+		        backgroundColor = {0.1, 0.1, 0.1, 0.95},
+		        horizontalScrollDisabled = true,
+		        topPadding = 20,
+		        bottomPadding = 20,
+		        x = display.contentCenterX + 100
+		    })
+
+		    scrollView.x = display.contentCenterX
+		    scrollView.y = display.contentCenterY
+		    scrollGroup:insert(scrollView)
+
+		    -- Close button (top-right corner)
+		    local closeButton = display.newText({
+		        text = "X",
+		        x = scrollView.x + scrollView.width * 0.5 - 10,
+		        y = scrollView.y - scrollView.height * 0.5 + 10,
+		        font = native.systemFontBold,
+		        fontSize = general.button.close.size
+		    })
+		    closeButton:setFillColor(1, 0.2, 0.2)
+		    closeButton.anchorX, closeButton.anchorY = 1, 0
+		    closeButton:addEventListener("tap", function()
+		        modlist_ui.Hide()
+		    end)
+		    scrollGroup:insert(closeButton)
+		    
+		    local MDL = ModManager.loadedMods or {}
+		    
+		    -- Display mod list
+		    if type(MDL) == "table" then
+		        local padding = 20
+		        local yPos = padding + 40
+		    
+		        for _, manifest in pairs(MDL) do
+		            local bgHeight = 120
+		    
+		            local bg = display.newRoundedRect(0, yPos, scrollView.width * 0.95, bgHeight, 12)
+		            bg.anchorX = 0
+		            bg:setFillColor(0.2, 0.2, 0.2, 0.9)
+		            scrollView:insert(bg)
+		            
+		            local info = {
+		                description = manifest.modDescription,
+		                name = manifest.modName,
+		                version = manifest.modVersion,
+		                author = manifest.modAuthor
+		            }
+		    
+		            -- Mod Title
+		            local title = display.newText({
+		                text = info.name or "unknown mod",
+		                x = bg.x + 10,
+		                y = bg.y - 30,
+		                width = bg.width - 20,
+		                font = native.systemFontBold,
+		                fontSize = 30,
+		                align = "left"
+		            })
+		            title.anchorX = 0
+		            title:setFillColor(1, 1, 1)
+		            scrollView:insert(title)
+		    
+		            -- Author
+		            local author = info.author or "Unknown"
+		            local subText = display.newText({
+		                text = "by " .. author,
+		                x = bg.x + 10,
+		                y = bg.y,
+		                font = native.systemFont,
+		                fontSize = 24,
+		                align = "left"
+		            })
+		            subText.anchorX = 0
+		            subText:setFillColor(0.8, 0.8, 0.8)
+		            scrollView:insert(subText)
+		    
+		            -- Version (anchored right)
+		            local versionText = display.newText({
+		                text = info.version or "?",
+		                x = bg.x + bg.width * 0.95,
+		                y = title.y,
+		                font = native.systemFont,
+		                fontSize = 20,
+		                align = "right"
+		            })
+		            versionText.anchorX = 1
+		            versionText:setFillColor(0.7, 0.7, 0.7)
+		            scrollView:insert(versionText)
+		    
+		            -- Description with truncation
+		            local rawDesc = info.description or "No description"
+		            local descWidth = bg.width - 20
+		            local descText = truncateText(rawDesc, native.systemFont, 22, descWidth)
+		    
+		            local description = display.newText({
+		                text = descText,
+		                x = bg.x + 10,
+		                y = bg.y + 30,
+		                width = descWidth,
+		                font = native.systemFont,
+		                fontSize = 24,
+		                align = "left"
+		            })
+		            description.anchorX = 0
+		            description:setFillColor(0.8, 0.8, 0.8)
+		            scrollView:insert(description)
+		    
+		            yPos = yPos + bg.height + padding
+		        end
+		    end
+		    
+		    scrollGroup:toFront()
+		end
+
+		-- Hide the mod list
+		function modlist_ui.Hide()
+		    if scrollGroup then
+		        scrollGroup:removeSelf()
+		        scrollGroup = nil
+		        scrollView = nil
+		    end
+		end
+
+
+		return Data
+	]\]
+
+	local example_mod_afterload = [[
+		--- Afterload Phase Script
+		-- Use this for:
+		-- - Modifying existing game objects
+		-- - Patching vanilla functions
+		-- - Runtime adjustments
+
+		-- Must Return A Function 
+		return function() 
+		    -- 1. Direct value replacement (Make sure you know the path exist or it'll throw an error)
+		    main.game.items.sword.damage = 200  -- Buff vanilla sword
+		    
+		    -- 2. Function patching (Only for existing one)
+		    local oldAttack = main.game.player.attack
+		    function main.game.player.attack(target)
+		        -- Add 10% crit chance
+		        if math.random() < 0.1 then
+		            return oldAttack(target) * 2
+		        end
+		        return oldAttack(target)
+		    end
+
+		end
+	]\]
+
+	local example_mod_preload = [[
+		--- Preload Phase Script
+		-- Use this for:
+		-- - Registering new items/entities
+		-- - Adding content via ModManager APIs
+		-- - Override important function 
+		-- Avoid:
+		-- - Modifying existing game objects
+		-- - Accessing uninitialized game systems
+
+		-- NOTE:
+		-- If your items uses custom assets use this template relative path
+		--          modded_assets/YourModFolderName/*
+		--  E.g    modded_assets/EPX/weapon/plasma_gun
+		-- The Assets must end with .png as extension because the game expect PNG
+		-- Do Not Include extension in the asset path
+
+
+		local modName = "Epic Weapons Expansion"
+
+		-- Required to return a function
+		return function()
+
+		    -- 1. Register new weapons
+		    ModManager.register("item", {
+		        {
+		            id = "plasma_rifle",
+		            name = "PLASMA-9000",
+		            damage = {1000, 5000},
+		            imageFile = "modded_assets/EPX/weapons/plasma"
+		        },
+		        -- More items...
+		    }, modName)
+		    
+		    -- 2. Register function overrides (if needed) [THIS IS EXAMPLE, WILL NOT WORK]
+		    ModManager.regFuncOverride("render_weapons", {
+		        -- Will replace lib.render.weaponDraw()
+		        weaponDraw = function(weapon, x, y)
+		            -- Custom drawing logic
+		        end
+		    }, modName)
+
+		end
+	]\]
+
+	local example_mod_manifest = [[
+		--- Mod Manifest Definition
+		-- @field modName (Required) Display name for the mod
+		-- @field modVersion (Required) Version string (semantic versioning recommended)
+		-- @field modAuthor (Required) Author/developer credit
+		-- @field preLoad Table of files to load BEFORE game initialization
+		-- @field afterLoad Table of files to load AFTER game initialization
+		-- @field dependencies Informal list of required mods (e.g., {"corelib@1.2"})
+
+		return {
+		    -- REQUIRED FIELDS
+		    modName = "Epic Weapons Expansion",
+		    modVersion = "2.3.1",
+		    modAuthor = "BorisTheModder",
+		    coreVersion = "1.0.0", -- Minimum CORE version to use this mod (useful for required internal functions to works)
+		    
+		    -- LOAD PHASE CONTROL
+		    preLoad = {
+		        -- These files can safely:
+		        -- Register new items/entities
+		        -- Add to ModManager tables
+		        -- NOT modify existing game objects
+		        -- Lua uses . as delimiter between folders
+		        "preload.item_init.lua"
+		    },
+		    
+		    afterLoad = {
+		        -- These files can:
+		        -- Modify existing game objects
+		        -- Patch vanilla functions
+		        -- Adjust balance values
+		        "afterload.damage.lua"
+		    },
+		    
+		    -- METADATA (Optional)
+		    description = "Adds 15 new weapons and rebalances combat",
+		    dependencies = {} -- Not yet Implemented
+		}
+	]\]
+
+	local readme = [[
+		# **Day R Survival Modding Guide**  
+		*(For Modders - Place mods in `angel_mod/modlist/`)*  
+
+		## **📁 Folder Structure**  
+		```markdown
+		angel_mod/
+		├── modlist/                          # All mods go here
+		│    ├── assets/                     # *Ignored* by loader
+		│    └── cool_mod/                  # Example mod folder  
+		│          └── manifest.lua     
+		├── loader.log                         # Debug logs  
+		└── (other files)  
+		```
+
+		---
+
+		## **📜 Mod Folder Rules**  
+		1. **Required Files**  
+		   - `manifest.lua` → *Must* define `modName`, `modVersion`, `modAuthor`, and load phases.  
+		   - At least one of:  
+		     - files listed in `manifest.preLoad`
+		     - files listed in `manifest.afterLoad`  
+
+		2. **Ignored Content**  
+		   - Mod folders starting with `.` or `_` (e.g., `.temp/`, `_test/`)  
+		   - `assets/` folders → *Useful for shared assets between mods*  
+
+		3. **Loader Behavior**  
+		   - **Logs**: Check `angel_mod/loader.log` for load errors.  
+		   - **Crashes**: Remove problematic mods and check logs.  
+
+		---
+
+		## **🛠️ Example Mod**  
+		- **Refer to `.example_mod` for example mod** *(Only example, not usable for usage)*
+
+		---
+
+		## **❗ Important Notes**  
+		- **No Hot-Reloading**: Restart the game to apply mods.  
+		- **Load Order**: Alphabetical by folder name.  
+		- **Conflicts**: Last-loaded mod wins (check logs for warnings) or duplicates will overwritten.  
+		- **Debugging**:  
+		  - Errors appear in `loader.log`.  
+		  - Use `ModManager.showToast()` for in-game alerts.
+		  - E.g `ModManager.showToast("Testing")`
+
+		---
+
+		## **🚫 Restricted Actions**  
+		- **Do NOT**:  
+		  - Modify files outside `modlist/`. *(You might broke the core or other critical V2L functions)*
+		  - Overwrite core game assets *(If you don't know what you doing, DO NOT Overwrite anything)*
+
+		---
+
+		**Need Help?**  
+		Check `loader.log` or ask in the modding community!  
+
+		---
+	]\]
+
+	return {
+		core = core,
+		loader = loaderLuaCode,
+		feature = featureFileCode,
+		menu = menuFileCode,
+		example_mod_afterload = example_mod_afterload,
+		example_mod_preload = example_mod_preload,
+		example_mod_manifest = example_mod_manifest,
+		readme = readme
+	}
 ]])
 
 
