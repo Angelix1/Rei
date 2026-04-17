@@ -15,9 +15,27 @@ local reinter = lfs.chdir(
 if reinter then
     lfs.mkdir("reinternal")
 else
-    return native.showAlert("[CORE_UPDATE] ERROR", "Cannot find app_data", {"OK"})
+    return native.showAlert("[CORE_UPDATE:mkdir] ERROR", "Cannot find app_data", {"OK"}, function(event) end)
 end 
 
+
+-- Bootstrap.lua
+write("bootstrap.lua", [=====[
+	return function()
+	    safeRequire("reinternal.manager") -- ModManager (calls manager)
+	    safeRequire("reinternal.utility") -- Global Utility (calls utility)
+	    safeRequire("reinternal.lib") -- calls files, and init core
+	end
+]=====])
+
+-- coreVersion.lua
+write("coreVersion.lua", [=====[
+	return {
+		version = 150
+	}
+]=====])
+
+-- core.lua
 write("reinternal/core.lua", [=====[
 	core = {}
 	lfs = lfs or require("lfs")
@@ -175,7 +193,7 @@ write("reinternal/core.lua", [=====[
 	return core
 ]=====])
 
-
+-- files.lua
 write("reinternal/files.lua", [=====[
 	local core = [[
 		core = {}
@@ -1640,7 +1658,7 @@ write("reinternal/files.lua", [=====[
 	}
 ]=====])
 
-
+-- lib.lua
 write("reinternal/lib.lua", [=====[
 	-- ================================== Function Hijacks
 
@@ -1887,7 +1905,7 @@ write("reinternal/lib.lua", [=====[
 	end
 ]=====])
 
-
+-- manager.lua
 write("reinternal/manager.lua", [=====[
 	-- Initialize core tables
 	ModManager.mods = ModManager.mods or {}
@@ -2256,7 +2274,7 @@ write("reinternal/manager.lua", [=====[
 	end
 ]=====])
 
-
+-- utility.lua
 write("reinternal/utility.lua", [=====[
 	function setupModDirectories(folders, files)
 		local basePath = system.pathForFile("", system.DocumentsDirectory)
@@ -2576,14 +2594,5 @@ write("reinternal/utility.lua", [=====[
 
 
 -- write("reinternal/.lua", [=====[]=====])
--- write("reinternal/.lua", [=====[]=====])
-
-
-write("coreVersion.lua", [=====[
-	return {
-		version = 150
-	}
-]=====])
-
 
 end
