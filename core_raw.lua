@@ -8,7 +8,7 @@ return function()
 	end
 
 
-write("reinternal/core.lua", [[
+write("reinternal/core.lua", [=====[
 	core = {}
 	lfs = lfs or require("lfs")
 	ModManager.version = "1.5.0"
@@ -163,10 +163,10 @@ write("reinternal/core.lua", [[
 
 
 	return core
-]])
+]=====])
 
 
-write("reinternal/files.lua", [[
+write("reinternal/files.lua", [=====[
 	local core = [[
 		core = {}
 		lfs = lfs or require("lfs")
@@ -322,7 +322,7 @@ write("reinternal/files.lua", [[
 
 
 		return core
-	]\]
+	]]
 
 	local loaderLuaCode = [[
 		-- main table
@@ -577,7 +577,7 @@ write("reinternal/files.lua", [[
 		end
 
 		return modLoader
-	]\]
+	]]
 
 	local featureFileCode = [[
 		local version = "1.5.0"
@@ -826,7 +826,7 @@ write("reinternal/files.lua", [[
 		        func = function() os.exit() end
 		    }
 		}
-	]\]
+	]]
 
 	local menuFileCode = [[
 		Data = {}
@@ -1443,7 +1443,7 @@ write("reinternal/files.lua", [[
 
 
 		return Data
-	]\]
+	]]
 
 	local example_mod_afterload = [[
 		--- Afterload Phase Script
@@ -1468,7 +1468,7 @@ write("reinternal/files.lua", [[
 		    end
 
 		end
-	]\]
+	]]
 
 	local example_mod_preload = [[
 		--- Preload Phase Script
@@ -1513,7 +1513,7 @@ write("reinternal/files.lua", [[
 		    }, modName)
 
 		end
-	]\]
+	]]
 
 	local example_mod_manifest = [[
 		--- Mod Manifest Definition
@@ -1553,7 +1553,7 @@ write("reinternal/files.lua", [[
 		    description = "Adds 15 new weapons and rebalances combat",
 		    dependencies = {} -- Not yet Implemented
 		}
-	]\]
+	]]
 
 	local readme = [[
 		# **Day R Survival Modding Guide**  
@@ -1616,7 +1616,7 @@ write("reinternal/files.lua", [[
 		Check `loader.log` or ask in the modding community!  
 
 		---
-	]\]
+	]]
 
 	return {
 		core = core,
@@ -1628,10 +1628,10 @@ write("reinternal/files.lua", [[
 		example_mod_manifest = example_mod_manifest,
 		readme = readme
 	}
-]])
+]=====])
 
 
-write("reinternal/lib.lua", [[
+write("reinternal/lib.lua", [=====[
 	-- ================================== Function Hijacks
 
 	-- Updated in v150
@@ -1694,13 +1694,13 @@ write("reinternal/lib.lua", [[
 	            
 	                            -- Navigate to target (skip if invalid path)
 	                            for i = 1, #keys-1 do
-	                                if type(target) ~= "table" or not target[keys[i\]\] then 
+	                                if type(target) ~= "table" or not target[keys[i]] then 
 	                                    break 
 	                                end
-	                                target = target[keys[i\]\]
+	                                target = target[keys[i]]
 	                            end
 	                            
-	                            target[keys[#keys\]\] = override
+	                            target[keys[#keys]] = override
 	                            logToFile(string.format("[ModManager] Override [Index] %s.%s = %s", item.id, path, override))
 	                        end
 	                    end
@@ -1720,12 +1720,12 @@ write("reinternal/lib.lua", [[
 	                    end
 	                    
 	                    for i = 1, #keys-1 do
-	                        if not target[keys[i\]\] then break end
-	                        target = target[keys[i\]\]
+	                        if not target[keys[i]] then break end
+	                        target = target[keys[i]]
 	                    end
 	                    
-	                    if target[keys[#keys\]\] then
-	                        target[keys[#keys\]\] = override
+	                    if target[keys[#keys]] then
+	                        target[keys[#keys]] = override
 	                        logToFile(string.format("[ModManager] Override [FlatKey] %s.%s", path, path))
 	                    end
 	                end
@@ -1750,12 +1750,12 @@ write("reinternal/lib.lua", [[
 	                    end
 	                    
 	                    for i = 1, #parts-1 do
-	                        if not target[parts[i]\] then break end
-	                        target = target[parts[i]\]
+	                        if not target[parts[i]] then break end
+	                        target = target[parts[i]]
 	                    end
 	                    
-	                    if target and target[parts[#parts]\] then
-	                        target[parts[#parts]\] = override.func
+	                    if target and target[parts[#parts]] then
+	                        target[parts[#parts]] = override.func
 	                        logToFile("[ModManager] Hijacked: "..funcPath)
 	                    end
 	                end
@@ -1875,10 +1875,10 @@ write("reinternal/lib.lua", [[
 	else
 		logToFile("Core Not Found")
 	end
-]])
+]=====])
 
 
-write("reinternal/manager.lua", [[
+write("reinternal/manager.lua", [=====[
 	-- Initialize core tables
 	ModManager.mods = ModManager.mods or {}
 	ModManager.routing = ModManager.routing or {}
@@ -2244,10 +2244,10 @@ write("reinternal/manager.lua", [[
 
 	    logToFile("[ModManager] categories has been setup")
 	end
-]])
+]=====])
 
 
-write("reinternal/utility.lua", [[
+write("reinternal/utility.lua", [=====[
 	function setupModDirectories(folders, files)
 		local basePath = system.pathForFile("", system.DocumentsDirectory)
 
@@ -2562,18 +2562,18 @@ write("reinternal/utility.lua", [[
 	    end
 	    return false
 	end
-]])
+]=====])
 
 
--- write("reinternal/.lua", [[]])
--- write("reinternal/.lua", [[]])
+-- write("reinternal/.lua", [=====[]=====])
+-- write("reinternal/.lua", [=====[]=====])
 
 
-write("coreVersion.lua", [[
+write("coreVersion.lua", [=====[
 	return {
 		version = 150
 	}
-]])
+]=====])
 
 
 end
