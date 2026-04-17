@@ -517,6 +517,453 @@ write("reinternal/files.lua", [=====[
 		    loaderLog(nil, true)  -- Clears the log file completely
 		    loaderLog("=============================== [LOADER] Scanning for mods")
 		    local basePath = system.pathForFile(MODS_DIR, system.DocumentsDirectory)
+		    ModManager.extendRoute("lib.battle.obj_list.effect_list", "battle_effect")
+	    ModManager.extendRoute("lib.battle.obj_list.perk_list", "battle_perk")
+	    ModManager.extendRoute("lib.chest.item_chest_list", "item_chest")
+	    ModManager.extendRoute("lib.chest.chest_list", "chest")
+	    ModManager.extendRoute("lib.config.hard_config", "config_hard")
+	    ModManager.extendRoute("lib.cooking_list", "cooking")
+	    ModManager.extendRoute("lib.disease.disease_list", "disease")
+	    ModManager.extendRoute("lib.interface.image_list", "image")
+	    ModManager.extendRoute("lib.interface.image_sheet_list", "image_sheet")
+	    ModManager.extendRoute("lib.items.ammo", "item")
+	    ModManager.extendRoute("lib.level.recipe_list", "recipe")
+	    ModManager.extendRoute("lib.level.perk_list", "perk")
+	    ModManager.extendRoute("lib.level.level_list", "level")
+	    ModManager.extendRoute("lib.location.city_list", "location_city")
+	    ModManager.extendRoute("lib.location.location_list", "location")
+	    -- ModManager.extendRoute("lib.location.location_season_list", "location")
+	    ModManager.extendRoute("lib.location.base_npc", "location_base_npc")
+	    ModManager.extendRoute("lib.location.base_enemy", "location_base_enemy")
+	    ModManager.extendRoute("lib.loot.item_loot_list", "loot_item")
+	    ModManager.extendRoute("lib.loot.miniloc_loot_list", "loot_miniloc")
+	    ModManager.extendRoute("lib.loot.location_loot_list", "loot_location")
+	    ModManager.extendRoute("lib.miniloc.miniloc_list", "miniloc")
+	    ModManager.extendRoute("lib.npc.npc_list", "npc")
+	    ModManager.extendRoute("lib.quest.bar_quest_list", "quest_bar")
+	    ModManager.extendRoute("lib.quest.quest_list", "quest")
+	    ModManager.extendRoute("lib.random_event_list", "random_event")
+	    ModManager.extendRoute("lib.weather.weather_list", "weather")
+	    
+	    
+	    ModManager.catroute() -- create category routing
+	    
+	    ModManager.extendFuncRoute("lib.interface.image_master", "image_method")
+	    ModManager.extendFuncRoute("lib.battle.unit_logic", "battle_unit_logic")    
+	        
+	    -- =====================================    
+	    local loader = require("angel_mod.loader")
+	    
+	    local allMods = loader.loadMods()
+	    
+	    local general = {
+	        fontSize = {
+	            title = 46,
+	            body = 40,
+	            footer = 34
+	        },
+	        button = {
+	            close = {
+	                size = 80,
+	                height = 60
+	            }
+	        },
+	        edgeRound = 8,
+	    }
+	    
+	    -- Core util here 
+	    
+	    if #allMods.preload > 0 then        
+	        loader.executeMods(allMods.preload, true)
+	    else    
+	        logToFile("ℹ️ No preload mods to load")
+	    end
+	    
+	    if #allMods.normal > 0 then
+	        -- Checker configuration
+	        local checkInterval = 1000 -- milliseconds 
+	        local maxAttempts = 40
+	        local attempts = 0
+	        local checkerTimer = nil
+	        local labels = "main.gameNetwork"
+	        
+	        -- Self-destructing checker function
+	        local function checkNotifications()
+	    	    if checkerTimer then
+			        timer.cancel(checkerTimer)
+			        checkerTimer = nil
+			    end
+
+	            attempts = attempts + 1
+	            
+	            -- Success condition
+	            if type(main) == "table" and type(main.gameNetwork) == "table" then
+	                logToFile("✅ " .. labels .. " ready - Executing normal mods")
+	                loader.executeMods(allMods.normal, false)
+	                
+	                itemlist = main.itemlist.table
+	                bweapon = main.battle.weapon.table
+	                
+	                -- Clean up
+	                if checkerTimer then timer.cancel(checkerTimer) end
+	                checkNotifications = nil  -- Remove function reference
+	                return
+	            end
+	            
+	            -- Fail condition
+	            if attempts >= maxAttempts then
+	                logToFile("❌ Failed to find " .. labels .. " after "..maxAttempts.." attempts")
+	                
+	                -- Clean up
+	                if checkerTimer then timer.cancel(checkerTimer) end
+	                checkNotifications = nil
+	                return
+	            end
+	            
+	            -- Continue checking
+	            logToFile("🔍 Waiting for " .. labels .. " (Attempt "..attempts.."/"..maxAttempts..")")
+	            checkerTimer = timer.performWithDelay(checkInterval, checkNotifications)
+	        end
+	        
+	        -- Start the checker
+	        logToFile("⏳ Delaying "..#allMods.normal.." normal mods until " .. labels .. " exist...")
+	        checkNotifications()  -- Initial call
+	    else    
+	        logToFile("ℹ️ No normal mods to load")
+	    end
+	    
+	    logToFile("[CORE] finished")
+	end 
+
+
+
+	return core
+]=====])
+
+-- files.lua
+write("reinternal/files.lua", [=====[
+	local core = [[
+		core = {}
+		lfs = lfs or require("lfs")
+		ModManager.version = "1.5.0"
+
+		-- ============================================  actual code under
+		function core.init()
+		    EnableDebugLog = true -- false in release
+		    logToFile("=============== [CORE:start] ===============")
+		    modloc = {}
+
+		    -- =============
+		    ModManager.extendRoute("lib.ally.ally_command", "ally_command")
+		    ModManager.extendRoute("lib.ally.ally_list", "ally")
+		    ModManager.extendRoute("lib.base_npc.base_npc_list", "basenpc")
+		    ModManager.extendRoute("lib.base_npc.buyer_list", "base_buyer")
+		    ModManager.extendRoute("lib.base_npc.trader_list", "base_trader")
+		    ModManager.extendRoute("lib.base_npc.workshop_list", "base_workshop")
+		    ModManager.extendRoute("lib.base_npc.train_list", "base_train")
+		    ModManager.extendRoute("lib.base_npc.product_list", "base_product")
+		    ModManager.extendRoute("lib.base_npc.product_sell_list", "base_product_sell")
+		    ModManager.extendRoute("lib.base_npc.product_craft_list", "base_product_craft")
+		    ModManager.extendRoute("lib.base_npc.product_repair_list", "base_product_repair")
+		    ModManager.extendRoute("lib.battle.obj_list.battle_map_list", "battle_map")
+		    ModManager.extendRoute("lib.battle.obj_list.battle_map_decor_list", "battle_map_decor")
+		    ModManager.extendRoute("lib.battle.obj_list.terrain_list", "battle_terrain")
+		    ModManager.extendRoute("lib.battle.obj_list.terrain_decor_list", "battle_terrain_decor")
+		    ModManager.extendRoute("lib.battle.obj_list.faction_list", "battle_faction")
+		    ModManager.extendRoute("lib.battle.obj_list.weapon_human_list", "battle_weapon")
+
+		    ModManager.extendRoute("lib.battle.obj_list.unit_ally_list", "battle_unit_ally")
+		    ModManager.extendRoute("lib.battle.obj_list.unit_bandit_list", "battle_unit_enemy")
+		    
+		    ModManager.extendRoute("lib.battle.obj_list.enemy_animal_list", "battle_enemy_set")
+		    ModManager.extendRoute("lib.battle.obj_list.effect_list", "battle_effect")
+		    ModManager.extendRoute("lib.battle.obj_list.perk_list", "battle_perk")
+		    ModManager.extendRoute("lib.chest.item_chest_list", "item_chest")
+		    ModManager.extendRoute("lib.chest.chest_list", "chest")
+		    ModManager.extendRoute("lib.config.hard_config", "config_hard")
+		    ModManager.extendRoute("lib.cooking_list", "cooking")
+		    ModManager.extendRoute("lib.disease.disease_list", "disease")
+		    ModManager.extendRoute("lib.interface.image_list", "image")
+		    ModManager.extendRoute("lib.interface.image_sheet_list", "image_sheet")
+		    ModManager.extendRoute("lib.items.ammo", "item")
+		    ModManager.extendRoute("lib.level.recipe_list", "recipe")
+		    ModManager.extendRoute("lib.level.perk_list", "perk")
+		    ModManager.extendRoute("lib.level.level_list", "level")
+		    ModManager.extendRoute("lib.location.city_list", "location_city")
+		    ModManager.extendRoute("lib.location.location_list", "location")
+		    -- ModManager.extendRoute("lib.location.location_season_list", "location")
+		    ModManager.extendRoute("lib.location.base_npc", "location_base_npc")
+		    ModManager.extendRoute("lib.location.base_enemy", "location_base_enemy")
+		    ModManager.extendRoute("lib.loot.item_loot_list", "loot_item")
+		    ModManager.extendRoute("lib.loot.miniloc_loot_list", "loot_miniloc")
+		    ModManager.extendRoute("lib.loot.location_loot_list", "loot_location")
+		    ModManager.extendRoute("lib.miniloc.miniloc_list", "miniloc")
+		    ModManager.extendRoute("lib.npc.npc_list", "npc")
+		    ModManager.extendRoute("lib.quest.bar_quest_list", "quest_bar")
+		    ModManager.extendRoute("lib.quest.quest_list", "quest")
+		    ModManager.extendRoute("lib.random_event_list", "random_event")
+		    ModManager.extendRoute("lib.weather.weather_list", "weather")
+		    
+		    
+		    ModManager.catroute() -- create category routing
+		    
+		    ModManager.extendFuncRoute("lib.interface.image_master", "image_method")
+		    ModManager.extendFuncRoute("lib.battle.unit_logic", "battle_unit_logic")    
+		        
+		    -- =====================================    
+		    local loader = require("angel_mod.loader")
+		    
+		    local allMods = loader.loadMods()
+		    
+		    local general = {
+		        fontSize = {
+		            title = 46,
+		            body = 40,
+		            footer = 34
+		        },
+		        button = {
+		            close = {
+		                size = 80,
+		                height = 60
+		            }
+		        },
+		        edgeRound = 8,
+		    }
+		    
+		    -- Core util here 
+		    
+		    if #allMods.preload > 0 then        
+		        loader.executeMods(allMods.preload, true)
+		    else    
+		        logToFile("ℹ️ No preload mods to load")
+		    end
+		    
+		    if #allMods.normal > 0 then
+		        -- Checker configuration
+		        local checkInterval = 1000 -- milliseconds 
+		        local maxAttempts = 40
+		        local attempts = 0
+		        local checkerTimer = nil
+		        local labels = "main.gameNetwork"
+		        
+		        -- Self-destructing checker function
+		        local function checkNotifications()
+		    	    if checkerTimer then
+				        timer.cancel(checkerTimer)
+				        checkerTimer = nil
+				    end
+
+		            attempts = attempts + 1
+		            
+		            -- Success condition
+		            if type(main) == "table" and type(main.gameNetwork) == "table" then
+		                logToFile("✅ " .. labels .. " ready - Executing normal mods")
+		                loader.executeMods(allMods.normal, false)
+		                
+		                itemlist = main.itemlist.table
+		                bweapon = main.battle.weapon.table
+		                
+		                -- Clean up
+		                if checkerTimer then timer.cancel(checkerTimer) end
+		                checkNotifications = nil  -- Remove function reference
+		                return
+		            end
+		            
+		            -- Fail condition
+		            if attempts >= maxAttempts then
+		                logToFile("❌ Failed to find " .. labels .. " after "..maxAttempts.." attempts")
+		                
+		                -- Clean up
+		                if checkerTimer then timer.cancel(checkerTimer) end
+		                checkNotifications = nil
+		                return
+		            end
+		            
+		            -- Continue checking
+		            logToFile("🔍 Waiting for " .. labels .. " (Attempt "..attempts.."/"..maxAttempts..")")
+		            checkerTimer = timer.performWithDelay(checkInterval, checkNotifications)
+		        end
+		        
+		        -- Start the checker
+		        logToFile("⏳ Delaying "..#allMods.normal.." normal mods until " .. labels .. " exist...")
+		        checkNotifications()  -- Initial call
+		    else    
+		        logToFile("ℹ️ No normal mods to load")
+		    end
+		    
+		    logToFile("[CORE] finished")
+		end 
+
+
+
+		return core
+	]]
+
+	local loaderLuaCode = [[
+		-- main table
+		local modLoader = {}
+
+		-- Constants
+		local MODS_DIR = "angel_mod/modlist"
+		local MANIFEST_FILE = "manifest.lua"
+		local LOG_FILE = "angel_mod/modlist/loader.log"
+		local IGNORE_PREFIXES = {".", "_"}
+		local IGNORE_FOLDERS = {"assets"}
+		local loaderVersion = "1.4.0"
+
+		-- Initialize logging
+		local function loaderLog(message, wipe)
+		    -- if not EnableDebugLog then return end
+		    
+		    local logPath = system.pathForFile(LOG_FILE, system.DocumentsDirectory)
+		    
+		    -- Wipe log if requested
+		    if wipe then
+		        local wipeFile = io.open(logPath, "w")
+		        if wipeFile then
+		            wipeFile:close()
+		            return true  -- Return success status
+		        end
+		        return false
+		    end
+		    
+		    -- Normal logging
+		    local logFile = io.open(logPath, "a")
+		    if not logFile then return false end
+		    
+		    local timestamp = os.date("[%Y-%m-%d %H:%M:%S]")
+		    local success, err = pcall(function()
+		        logFile:write(timestamp .. " " .. message .. "\n")
+		    end)
+		    
+		    logFile:close()
+		    return success, err
+		end
+
+		-- Helper function to check if a path should be ignored
+		local function shouldIgnore(path)
+		    local name = path:match("([^/\\]+)$") or path
+		    
+		    for _, prefix in ipairs(IGNORE_PREFIXES) do
+		        if name:sub(1, #prefix) == prefix then
+		            return true
+		        end
+		    end
+		    
+		    for _, folder in ipairs(IGNORE_FOLDERS) do
+		        if name:lower() == folder:lower() then
+		            return true
+		        end
+		    end
+		    
+		    return false
+		end
+
+		-- Load and validate a single mod
+		local function loadMod(modPath)
+		    local manifestPath = modPath .. "." .. MANIFEST_FILE:gsub(".lua$", "")
+		    local success, manifest = pcall(require, manifestPath)
+		    
+		    if not success then
+		        local a = "❌ Failed to load manifest from " .. modPath .. ": " .. tostring(manifest)
+		        loaderLog(a)
+		        error(a)
+		        return nil
+		    end
+		    
+		    if type(manifest) ~= "table" then
+		        local _ = "❌ Manifest must return a table in " .. modPath
+		        loaderLog(_)
+		        error(_)
+		        return nil
+		    end
+
+		    -- Validate required fields
+		    local requiredFields = {
+		        "modName", "modVersion", "modAuthor", 
+		        "preLoad", "afterLoad", "coreVersion"
+		    }
+		    for _, field in ipairs(requiredFields) do
+		        if manifest[field] == nil then
+		            local _ = "❌ Missing required field '" .. field .. "' in " .. modPath
+		            loaderLog(_)
+		            error(_)
+		            return nil
+		        end
+		    end
+		    
+		    -- Validate core version compatibility [ ADDED IN 1.1.0 ]
+		    if not manifest.coreVersion then
+		        local _ = "❌ Missing required field 'coreVersion' in " .. modPath
+		        loaderLog(_)
+		        error(_)
+		        return nil
+		    else
+		        local versionCheck = ModManager.isVersionSufficient(manifest.coreVersion, ModManager.version)
+		        if not versionCheck then
+		            local _ = "❌ Mod requires ModManager version " .. manifest.coreVersion .. " or higher (current: " .. ModManager.version .. ", Please update to latest version or disable the mod) in " .. modPath
+		            loaderLog(_)
+		            error(_)
+		            return nil
+		        end
+		    end
+		    
+		    -- validation for load categories
+		    if not (manifest.preLoad or manifest.afterLoad) then
+		        local err = "❌ Manifest must contain preLoad/afterLoad tables in "..modPath
+		        loaderLog(err)
+		        error(err)
+		        return nil
+		    end
+		    
+		    -- Verify files exist
+		    local function verifyFiles(files)
+		        for _, file in ipairs(files or {}) do
+		            local filePath = modPath .. "." .. file:gsub("%.lua$", "")
+		            local ok, err = pcall(require, filePath)
+		            if not ok then
+		                error("❌ Failed to load '" .. file .. "': " .. err)
+		            end
+		        end
+		    end
+		    
+		    verifyFiles(manifest.preLoad)
+		    verifyFiles(manifest.afterLoad)
+		    
+		    return manifest
+		end
+
+		-- Execute mod files
+		local function executeMod(modPath, manifest)
+		    for _, file in ipairs(manifest.modFiles) do
+		        local filePath = modPath .. "." .. file:gsub(".lua$", "")
+		        local success, modChunk = pcall(require, filePath)
+		        
+		        if success then            
+		            if type(modChunk) == "function" then
+		                local actionSuccess, actionResult = pcall(modChunk)
+		                if not actionSuccess then
+		                    loaderLog("❌ Error running action in " .. file .. ": " .. tostring(actionResult))
+		                else
+		                    loaderLog("✔ Executed " .. file)
+		                end
+		            else
+		                loaderLog("ℹ️ " .. file .. " loaded but didn't return an action function")
+		            end
+		        else
+		            loaderLog("❌ Failed to load " .. file .. ": " .. tostring(modChunk))
+		        end
+		            
+		        -- ::continue::
+		    end
+		end
+
+		-- Main loader function
+
+		function modLoader.loadMods()
+		    loaderLog(nil, true)  -- Clears the log file completely
+		    loaderLog("=============================== [LOADER] Scanning for mods")
+		    local basePath = system.pathForFile(MODS_DIR, system.DocumentsDirectory)
 		    local mods = {
 		        preload = {},
 		        normal = {}
