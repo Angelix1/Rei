@@ -8,9 +8,11 @@ return function()
 	end
 
 lfs = lfs or require("lfs")
-local s = lfs.chdir(system.pathForFile(nil, system.DocumentsDirectory)
+local reinter = lfs.chdir(
+		system.pathForFile(nil, system.DocumentsDirectory)
+	)
 
-if s then
+if reinter then
     lfs.mkdir("reinternal")
 else
     return native.showAlert("[CORE_UPDATE] ERROR", "Cannot find app_data", {"OK"})
