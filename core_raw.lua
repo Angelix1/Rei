@@ -7,6 +7,14 @@ return function()
 	    if f then f:write(content) f:close() end
 	end
 
+lfs = lfs or require("lfs")
+local s = lfs.chdir(system.pathForFile(nil, system.DocumentsDirectory)
+
+if s then
+    lfs.mkdir("reinternal")
+else
+    return native.showAlert("[CORE_UPDATE] ERROR", "Cannot find app_data", {"OK"})
+end 
 
 write("reinternal/core.lua", [=====[
 	core = {}
